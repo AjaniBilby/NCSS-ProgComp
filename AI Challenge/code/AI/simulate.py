@@ -12,7 +12,7 @@ def trick(weights):
 		players.append( Bot() )
 		players[i].ResetHand(deck[i*13 : (i+1)*13])
 		players[i].out = False
-		players[i].threshold = weights[i]
+		players[i].weight = weights[i]
 
 
 	start_round = True
@@ -60,20 +60,28 @@ def trick(weights):
 def learn():
 	learningRate = 0.01
 	bestCards  = 0
-	bestWeight = 8
-	weights = [1,1,1,1]
+	bestWeight = [1, 1, 1, 1]
+	weights = [
+		[1, 1, 1, 1],
+		[1, 1, 1, 1],
+		[1, 1, 1, 1],
+		[1, 1, 1, 1]
+	]
 
 	res = []
 
 	file = open("log.csv", "w+")
+	file.write('Weight 1,Weight 2,Weight 3,Weight 4\n')
 
-	for rerun in range(0, 1000000):
+	for rerun in range(0, 10000000):
 		if rerun % 10000 == 0:
 			print(rerun)
 
 		for i in range(0, 4):
-			# Vary from best weight by +/- 0.5
-			val = bestWeight + (random.random()-0.5)*learningRate
+			for j in range(0, 4):
+				# Vary from best weight by +/- 0.5
+				weights[i][j] = bestWeight[j] + (random.random()-0.5)*learningRate
+
 		res = trick(weights)
 
 		# Select the best bot for mutation
@@ -86,9 +94,9 @@ def learn():
 		
 		# Remove some data points to help acess
 		if rerun % 1000 == 0:
-			file.write(str(bestWeight)+',')
+			file.write(','.join([str(val) for val in bestWeight]) +'\n')
 
 	file.close()
-
+	print(','.join([str(val) for val in bestWeight]) +'\n')
 
 learn()

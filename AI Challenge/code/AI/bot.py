@@ -4,7 +4,7 @@ class Bot:
 	def __init__(self):
 		self.hand = CardSet(autoFill=False)
 		self.unseen = CardSet(autoFill=True)
-		self.threshold = 8
+		self.weight = [1, 0, 0, 8]
 
 	"""
 	Ensure that the BOT only has cards it should have
@@ -40,8 +40,10 @@ class Bot:
 
 		# Save powerful cards
 		#        Make the power's relative
-		weight = (pick.worth - beat[0].worth) / min(hand_sizes)
-		if (weight > self.threshold):
+		weight = ((pick.worth - beat[0].worth) / min(hand_sizes) ) * self.weight[0]
+		weight += (pick.worth - beat[0].worth) * self.weight[1]
+		weight += min(hand_sizes) * self.weight[2]
+		if (weight > self.weight[3]):
 			return []
 
 		return [pick]
