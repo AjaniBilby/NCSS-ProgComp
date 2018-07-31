@@ -58,7 +58,7 @@ def trick(weights):
 
 
 def learn():
-	learningRate = 0.01
+	learningRate = 0.05
 	bestCards  = 0
 	bestWeight = [1, 1, 1, 1]
 	weights = [
@@ -82,7 +82,11 @@ def learn():
 				# Vary from best weight by +/- 0.5
 				weights[i][j] = bestWeight[j] + (random.random()-0.5)*learningRate
 
-		res = trick(weights)
+		res = [0, 0, 0, 0]
+		for i in range(0, 10):
+			out = trick(weights)
+			for i in range(0, 4):
+				res[i] += out[i]
 
 		# Select the best bot for mutation
 		bestCards  = res[0]
