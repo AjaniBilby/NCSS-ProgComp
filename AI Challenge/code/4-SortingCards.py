@@ -2,7 +2,7 @@ from AI.card import Card, CardGroupID
 
 def sort_cards(cards):
 	def sortFunc(val):
-		return [Card(val).unqiueID]
+		return [Card(val).suitID, Card(val).rankID]
 	
 	return sorted(cards, key=sortFunc)
 
