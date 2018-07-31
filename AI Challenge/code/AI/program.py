@@ -19,14 +19,8 @@ def play(hand, is_start_of_round, play_to_beat, round_history, player_no, hand_s
 				item[0]                         # Player number
 			)
 
-	if is_start_of_round:
-		if len(play_to_beat) != 0 and play_to_beat[0] != "":
-			raise ValueError("There cannot be a play to beat when a round is starting")
-
 	# Allow the bot to make a play
 	if len(play_to_beat) < 1 or play_to_beat[0] == "":
-		if not is_start_of_round:
-			raise ValueError("No play to beat while not at the start of the game\nSome one's system broke")
 
 		cards = bot.Play(
 			True,

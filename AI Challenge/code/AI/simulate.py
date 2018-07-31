@@ -13,6 +13,7 @@ def trick(weights):
 		players[i].ResetHand(deck[i*13 : (i+1)*13])
 		players[i].out = False
 		players[i].weight = weights[i]
+	players[0].neverPass = True
 
 
 	start_round = True
@@ -58,47 +59,70 @@ def trick(weights):
 
 
 def learn():
-	learningRate = 0.05
-	bestCards  = 0
-	bestWeight = [1, 1, 1, 1]
+	learningRate = 0.01
+	bestWeight = [3.8,-2.4,-2.6,3.2]
 	weights = [
-		[1, 1, 1, 1],
-		[1, 1, 1, 1],
-		[1, 1, 1, 1],
-		[1, 1, 1, 1]
+		[1,1,1,1],
+		[1,1,1,1],
+		[1,1,1,1],
+		[1,1,1,1],
 	]
 
-	res = []
-
 	file = open("log.csv", "w+")
-	file.write('Weight 1,Weight 2,Weight 3,Weight 4\n')
+	file.write('Weight 1,Weight 2,Weight 3,Weight 4,Score 1, Score 2,Score 3, Score 4\n')
 
-	for rerun in range(0, 10000000):
-		if rerun % 10000 == 0:
-			print(rerun)
-
-		for i in range(0, 4):
+	for rerun in range(0, 100000):
+		#  Bot[0] never passes
+		for i in range(1, 4):
 			for j in range(0, 4):
-				# Vary from best weight by +/- 0.5
-				weights[i][j] = bestWeight[j] + (random.random()-0.5)*learningRate
+				# Vary from best weight by +/-learningRate
+				weights[i][j] = ((random.random()-0.5)*2) *learningRate + bestWeight[j]
 
-		res = [0, 0, 0, 0]
-		for i in range(0, 10):
+
+
+		# Determine the best player by number of wins over multiple games
+		wins = [0,0,0,0]
+		for i in range(0, 5):
 			out = trick(weights)
+
+			# Determine the winner
+			lowestScore = 100
 			for i in range(0, 4):
-				res[i] += out[i]
+				if out[i] < lowestScore:
+					lowestScore = out[i]
+
+			# Give the winner a single point
+			for i in range(0, 4):
+				if out[i] == lowestScore:
+					wins[i] += 1
+					break
+
+
 
 		# Select the best bot for mutation
-		bestCards  = res[0]
-		bestWeight = weights[0]
+		#  Bot[0] never passes
+		greatest = 0
 		for i in range(1, 3):
-			if res[i] < bestCards:
-				bestCards = res[i]
-				bestWeight = weights[i]
+			if wins[i] > greatest:
+				greatest = wins[i]
+		# only transfer the winners data as apose to the current best
+		#   saves compute time
+		for i in range(1, 3):
+			if wins[i] == greatest:
+				bestWeight = [val for val in weights[i]]
+				break
+
+
 		
 		# Remove some data points to help acess
-		if rerun % 1000 == 0:
-			file.write(','.join([str(val) for val in bestWeight]) +'\n')
+		if rerun % 500 == 0:
+
+			# Print and write out results
+			print(str(rerun/1000) + '%')
+			print(' ', ','.join([str(val) for val in bestWeight]))
+
+			file.write(','.join([str(val) for val in bestWeight]))
+			file.write(','+ ','.join([str(val/5) for val in wins]) +'\n')
 
 	file.close()
 	print(','.join([str(val) for val in bestWeight]) +'\n')

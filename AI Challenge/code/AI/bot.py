@@ -4,7 +4,8 @@ class Bot:
 	def __init__(self):
 		self.hand = CardSet(autoFill=False)
 		self.unseen = CardSet(autoFill=True)
-		self.weight = [1, 0, 0, 8]
+		self.weight = [3.8,-2.4,-2.6,3.2]
+		self.neverPass = False
 
 	"""
 	Ensure that the BOT only has cards it should have
@@ -22,28 +23,33 @@ class Bot:
 
 	def __Select(self, beat, hand_sizes):
 
-		# IF only one card remains
-		#  Play the card in attempt to win the round
-		#  Thus starting the next round will cause you to win
-		if len(self.hand.remain) <= 1:
-			pick = self.hand.highest()
+		# # IF only one card remains
+		# #  Play the card in attempt to win the round
+		# #  Thus starting the next round will cause you to win
+		# if len(self.hand.remain) <= 1:
+		# 	pick = self.hand.highest()
 
-			if beat[0].worth < pick.worth:
-				return [pick]
-			else:
-				return []
+		# 	if beat[0].worth < pick.worth:
+		# 		return [pick]
+		# 	else:
+		# 		return []
 
 		# Player the lowest valid card
 		pick = self.hand.lowest(beat[0])
 		if pick == None:
 			return []
 
+		if self.neverPass:
+			return [pick]
+
 		# Save powerful cards
 		#        Make the power's relative
-		weight = ((pick.worth - beat[0].worth) / min(hand_sizes) ) * self.weight[0]
-		weight += (pick.worth - beat[0].worth) * self.weight[1]
-		weight += min(hand_sizes) * self.weight[2]
-		if (weight > self.weight[3]):
+		shs = min(hand_sizes)
+		weight = ((beat[0].worth/pick.worth) / shs )       * self.weight[0]
+		weight += (beat[0].worth/pick.worth)               * self.weight[1]
+		weight += (shs/13)                                 * self.weight[2]
+		weight += self.unseen.strength(pick)               * self.weight[3]
+		if (weight > 1):
 			return []
 
 		return [pick]
