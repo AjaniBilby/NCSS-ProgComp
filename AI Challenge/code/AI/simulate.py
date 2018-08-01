@@ -175,7 +175,7 @@ def learn():
 	logInterval = (cycles/200) # 200 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 
-	def updateLog(rerun, gameCount, winRate):
+	def updateLog(rerun, gameCount, winRate, winCount):
 		if generation < 2:
 			print(' Est: Unknown')
 		else:
@@ -186,6 +186,7 @@ def learn():
 		print('  - Iteration    :', rerun)
 		print('  - Generation   :', generation)
 		print('  - Games Played :', gameCount)
+		print('  - Wins         :', winCount)
 		print('  - Win Rate     :', str(winRate)[0:4]+'%')
 		print(' Best;')
 		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in bestNetwork.linear[0:10]]) + ', ... ]', len(bestNetwork.linear) )
@@ -257,14 +258,14 @@ def learn():
 			# Print and write out results
 			print('\nStatus:', str(rerun/cycles*100)[0:4] + '%')
 			now = time.time()
-			updateLog(rerun, games, wins/games)
+			updateLog(rerun, games, wins/games, wins)
 			wins = 0
 			games = 0
 			last = time.time()
 
 	print('Finished\a')
 	now = time.time()
-	updateLog(cycles, games, wins/games)
+	updateLog(cycles, games, wins/games, wins)
 	last = now
 	file.close()
 
