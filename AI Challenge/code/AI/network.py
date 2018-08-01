@@ -101,7 +101,7 @@ class ANN:
 						opts.append(0)
 
 					weights[x][y1].append( random.choice(opts) )
-					weights[x][y1][y2] += (random.random()*2 -1) * 5
+					weights[x][y1][y2] += (random.random()*2 -1) * 2
 					linear.append(weights[x][y1][y2])
 
 		out = ANN([], [])

@@ -191,7 +191,7 @@ def learn():
 		print(' Best;')
 		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in bestNetwork.linear[0:10]]) + ', ... ]', len(bestNetwork.linear) )
 		print('  - Structure    : [', ', '.join([str(val)[0:5] for val in bestNetwork.columns]), ']', len(bestNetwork.columns) )
-		print('  - Scores       :', ', '.join([str(val) for val in bestScores]))
+		print('  - Wins         :', ', '.join([str(val) for val in bestScores]))
 		print(' Previous;')
 		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in prevNetwork.linear[0:10]]) + ', ... ]', len(prevNetwork.linear) )
 		print('  - Structure    : [', ', '.join([str(val)[0:5] for val in prevNetwork.columns]), ']', len(prevNetwork.columns)  )
@@ -216,13 +216,19 @@ def learn():
 
 
 
-		# Make the games best out of 3 to remove chances of fluke
+		# Make the games best out of 10 to remove chances of fluke
 		score = [0, 0, 0, 0]
-		for j in range(0, 3):
+		for j in range(0, 10):
 			out = game(players)
 			games += 1
-			for k, val in enumerate(out):
-				score[k] += val
+
+			winnerScore = out[0]
+			winnerIndex = 0
+			for k in range(1, 4):
+				if out[k] > winnerScore:
+					winnerScore = out[k]
+					winnerIndex = k
+			score[winnerIndex] += 1
 
 
 
@@ -246,9 +252,9 @@ def learn():
 				print('  - New Best     :', bestScore)
 				break
 
-		# If any bot beat simplex
-		if score[0] < greatest:
-			wins += 1
+		# Add up all wins not including the simplex bot
+		for i in range(1, 4):
+			wins += score[i]
 
 
 		
