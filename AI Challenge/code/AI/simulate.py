@@ -171,7 +171,7 @@ def learn():
 	wins        = 0
 	games       = 0
 	generation  = 0
-	cycles      = 1000000
+	cycles      = 500000
 	logInterval = (cycles/200) # 200 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 
@@ -233,7 +233,7 @@ def learn():
 
 
 		# Determine the best (non-simplex) bot
-		greatest = bestScore
+		greatest = 0
 		for i in range(1, 4):
 			if score[i] > greatest:
 				greatest = score[i]
