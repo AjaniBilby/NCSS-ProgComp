@@ -222,8 +222,6 @@ def learn():
 			games += 1
 			for k, val in enumerate(out):
 				score[k] += val
-				if k != 0 and val > 0:
-					wins += 1
 
 
 
@@ -246,6 +244,10 @@ def learn():
 				generation += 1
 				print('  - New Best     :', bestScore)
 				break
+
+		# If any bot beat simplex
+		if score[0] < greatest:
+			wins += 1
 
 
 		
