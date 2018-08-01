@@ -70,8 +70,8 @@ class ANN:
 			# Mutate
 			columns[i] = round( columns[i] + (random.random()*2-0.8)*1.5 )
 			# Ensure at least one neuron exists
-			if columns[i] < 1:
-				columns[i] = 1
+			if columns[i] < 2:
+				columns[i] = 2
 
 		# Insure that input and output sizes stay the same
 		columns[0] = self.columns[0]

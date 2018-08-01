@@ -163,37 +163,42 @@ def learn():
 
 	file = open("log.csv", "w+")
 	file.write('Generation,')
-	file.write('Score 1, Score 2,Score 3, Score 4, Neuron Count, Columns, Largest Column\n')
+	file.write('Score 1, Score 2,Score 3, Score 4,Win Rate,Neuron Count, Columns, Largest Column\n')
 
 	# Estimation info
 	last = time.time()
 
+	wins        = 0
+	games       = 0
 	generation  = 0
 	cycles      = 1000000
 	logInterval = (cycles/200) # 200 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 
-	def updateLog(gameCount):
+	def updateLog(rerun, gameCount, winRate):
 		if generation < 2:
 			print(' Est: Unknown')
 		else:
-			duration = (now - last) / logInterval * (cycles-generation)
+			duration = (now - last) * ((cycles-rerun)/logInterval)
 			print(' Est:', str(duration/60)[0:5]+'mins')
 
 		print(' Status;')
-		print('  - Iteration: ', gameCount)
-		print('  - Generation:', generation)
+		print('  - Iteration    :', rerun)
+		print('  - Generation   :', generation)
+		print('  - Games Played :', gameCount)
+		print('  - Win Rate     :', str(winRate)[0:4]+'%')
 		print(' Best;')
-		print('  - Weights:   [', ', '.join([str(val)[0:5] for val in bestNetwork.linear[0:10]]) + ', ... ]', len(bestNetwork.linear) )
-		print('  - Structure: [', ', '.join([str(val)[0:5] for val in bestNetwork.columns]), ']', len(bestNetwork.columns) )
-		print('  - Scores:   ', ', '.join([str(val) for val in bestScores]))
+		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in bestNetwork.linear[0:10]]) + ', ... ]', len(bestNetwork.linear) )
+		print('  - Structure    : [', ', '.join([str(val)[0:5] for val in bestNetwork.columns]), ']', len(bestNetwork.columns) )
+		print('  - Scores       :', ', '.join([str(val) for val in bestScores]))
 		print(' Previous;')
-		print('  - Weights:   [', ', '.join([str(val)[0:5] for val in prevNetwork.linear[0:10]]) + ', ... ]', len(prevNetwork.linear) )
-		print('  - Structure: [', ', '.join([str(val)[0:5] for val in prevNetwork.columns]), ']', len(prevNetwork.columns)  )
+		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in prevNetwork.linear[0:10]]) + ', ... ]', len(prevNetwork.linear) )
+		print('  - Structure    : [', ', '.join([str(val)[0:5] for val in prevNetwork.columns]), ']', len(prevNetwork.columns)  )
 		print(' Progress;')
 
 		file.write(str(generation)+',')
 		file.write(','.join([str(val) for val in bestScores])+',')
+		file.write(str(winRate)+',')
 		file.write(str(len(bestNetwork.linear))+',')
 		file.write(str(len(bestNetwork.columns))+',')
 		file.write(str(max(bestNetwork.columns))+'\n')
@@ -214,8 +219,11 @@ def learn():
 		score = [0, 0, 0, 0]
 		for j in range(0, 3):
 			out = game(players)
+			games += 1
 			for k, val in enumerate(out):
 				score[k] += val
+				if k != 0 and val > 0:
+					wins += 1
 
 
 
@@ -236,7 +244,7 @@ def learn():
 				bestScore   = score[i]
 				bestScores  = score
 				generation += 1
-				print('  - New Best:', bestScore)
+				print('  - New Best     :', bestScore)
 				break
 
 
@@ -245,18 +253,20 @@ def learn():
 		if rerun % logInterval == 0:
 
 			# Print and write out results
-			print('\nStatus:', str(rerun/cycles*100)[0:3] + '%')
+			print('\nStatus:', str(rerun/cycles*100)[0:4] + '%')
 			now = time.time()
-			updateLog(rerun)
+			updateLog(rerun, games, wins/games)
+			wins = 0
+			games = 0
 			last = time.time()
 
 	print('Finished\a')
 	now = time.time()
-	updateLog(cycles)
+	updateLog(cycles, games, wins/games)
 	last = now
 	file.close()
 
-	print('\nEnd Product');
+	print('\nEnd Product')
 	print(' Best;')
 	print('  - Weights:   [', ', '.join([str(val)[0:10] for val in bestNetwork.weights]), ']')
 	print('  - Structure: [', ', '.join([str(val)[0:10] for val in bestNetwork.columns]), ']')
