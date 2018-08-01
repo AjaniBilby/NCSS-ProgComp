@@ -270,20 +270,17 @@ def learn():
 			last = time.time()
 
 	print('Finished\a')
-	now = time.time()
-	updateLog(cycles, games, wins/games, wins)
-	last = now
 	file.close()
 
 	print('\nEnd Product')
 	print(' Best;')
-	print('  - Weights:   [', ', '.join([str(val)[0:10] for val in bestNetwork.weights]), ']')
+	print('  - Weights:   [', ', '.join([str(val)[0:10] for val in bestNetwork.linear]), ']')
 	print('  - Structure: [', ', '.join([str(val)[0:10] for val in bestNetwork.columns]), ']')
 
 	file = open("result.dat", "w+")
-	file.write('Result;')
-	file.write(' - Weights:   [' + ', '.join([str(val)[0:10] for val in bestNetwork.weights]) + ']')
-	file.write(' - Structure: [' + ', '.join([str(val)[0:10] for val in bestNetwork.columns]) + ']')
+	file.write('Result;\n')
+	file.write(' - Weights:   [' + ', '.join([str(val)[0:10] for val in bestNetwork.linear]) + ']\n')
+	file.write(' - Structure: [' + ', '.join([str(val)[0:10] for val in bestNetwork.columns]) + ']\n')
 	file.close()
 
 
