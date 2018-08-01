@@ -51,3 +51,13 @@ A game ends when either;
  * 10 rounds have beeen completed
 Players are ranked by their total score including ties.
 
+---
+
+# Passing Strategy
+You may choose not to beat the previous play, even if you can.  
+You can keep your high cards for a better opportunity (unless you're starting).  
+**Passing does not prevent you from playing** when your turn comes round again.  
+
+For example, late in a game, Mariana starts with a 4, Mohammad beats it with a Jack, Hugo passes, Ying plays an Ace, Mariana and Mohammad pass.    
+Hugo suspects that Ying will win by playing her remaining cards as a combination if he pass, so he now plays his 2♣, which he held back before.
+

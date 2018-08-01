@@ -37,6 +37,13 @@ class Card:
 	def match(self, other):
 		return self.suitID == other.suitID and self.rankID == other.suitID
 
+	def lessThan(self, card):
+		return card.worth > self.worth
+	def greaterThan(self, card):
+		return card.worth < self.worth
+	def equalTo(self, card):
+		return card.worth == self.worth
+
 
 def CardSortMethod(val):
 	return [val.rankID, val.suitID]
@@ -110,3 +117,17 @@ class CardSet:
 				lowest = val
 
 		return lowest
+
+	def contains(self, target):
+		for card in self.remain:
+			if card.equalTo(target):
+				return True
+		return False
+
+	def subsetGreater(self, card):
+		out = []
+		for opt in self.remain:
+			if card.lessThan(opt):
+				out.append(opt)
+
+		return opt
