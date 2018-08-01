@@ -180,7 +180,7 @@ def learn():
 			print(' Est: Unknown')
 		else:
 			duration = (now - last) * ((cycles-rerun)/logInterval)
-			print(' Est:', str(duration/60)[0:5]+'mins')
+			print(' Est:', str(duration/60)[0:5], 'mins')
 
 		print(' Status;')
 		print('  - Iteration    :', rerun)
