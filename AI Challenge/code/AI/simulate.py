@@ -168,7 +168,7 @@ def learn():
 	wins        = 0
 	games       = 0
 	generation  = 0
-	cycles      = 1000
+	cycles      = 100000
 	logInterval = (cycles/500) # 500 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 
