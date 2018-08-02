@@ -9,7 +9,7 @@ class Bot:
 			[3,3,2,1],
 			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 		)
-		self.simplex = True
+		self.simplex = False
 
 	"""
 	Ensure that the BOT only has cards it should have
@@ -29,7 +29,7 @@ class Bot:
 
 		# No passing behaviour active when simplex is on
 		#   Player the lowest valid card
-		if self.simplex:
+		if self.simplex == True:
 			pick = self.hand.lowest(beat[0])
 			if pick == None:
 				return []

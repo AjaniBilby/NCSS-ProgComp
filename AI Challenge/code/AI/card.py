@@ -130,4 +130,4 @@ class CardSet:
 			if card.lessThan(opt):
 				out.append(opt)
 
-		return opt
+		return out

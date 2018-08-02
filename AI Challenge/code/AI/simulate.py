@@ -129,8 +129,6 @@ def game(players):
 
 		# Sum all scores
 		for j, val in enumerate(out):
-			if j >= len(scores):
-				print('out', out)
 			scores[j] += val
 
 		# If a player has passed 100 (there may be multiple)
@@ -155,9 +153,8 @@ def learn():
 		Bot()
 	]
 	players[0].simplex = True
-	
-	bestScores = [0, 0, 0, 0]
-	bestScore = -100
+	bestScores  = [0, 0, 0, 0]
+	bestScore   = 0
 	bestNetwork = players[0].network
 	prevNetwork = players[0].network
 
@@ -171,30 +168,31 @@ def learn():
 	wins        = 0
 	games       = 0
 	generation  = 0
-	cycles      = 500000
-	logInterval = (cycles/200) # 200 = number of data points at the end of training
+	cycles      = 1000
+	logInterval = (cycles/500) # 500 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 
 	def updateLog(rerun, gameCount, winRate, winCount):
 		if generation < 2:
 			print(' Est: Unknown')
 		else:
+			# duration 1 log inter. | log intervals left
 			duration = (now - last) * ((cycles-rerun)/logInterval)
 			print(' Est:', str(duration/60)[0:5], 'mins')
 
 		print(' Status;')
-		print('  - Iteration    :', rerun)
-		print('  - Generation   :', generation)
-		print('  - Games Played :', gameCount)
-		print('  - Wins         :', winCount)
-		print('  - Win Rate     :', str(winRate)[0:4]+'%')
+		print('  - Iteration      :', rerun)
+		print('  - Generation     :', generation)
+		print('  - Games Played   :', gameCount)
+		print('  - Wins VS Simplex:', winCount)
+		print('  - Win Rate       :', str(winRate)[0:4]+'%')
 		print(' Best;')
-		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in bestNetwork.linear[0:10]]) + ', ... ]', len(bestNetwork.linear) )
-		print('  - Structure    : [', ', '.join([str(val)[0:5] for val in bestNetwork.columns]), ']', len(bestNetwork.columns) )
-		print('  - Wins         :', ', '.join([str(val) for val in bestScores]))
+		print('  - Weights        : [', ', '.join([str(val)[0:5] for val in bestNetwork.linear[0:10]]) + ', ... ]', len(bestNetwork.linear) )
+		print('  - Structure      : [', ', '.join([str(val)[0:5] for val in bestNetwork.columns]), ']', len(bestNetwork.columns) )
+		print('  - Wins           :', ', '.join([str(val) for val in bestScores]))
 		print(' Previous;')
-		print('  - Weights      : [', ', '.join([str(val)[0:5] for val in prevNetwork.linear[0:10]]) + ', ... ]', len(prevNetwork.linear) )
-		print('  - Structure    : [', ', '.join([str(val)[0:5] for val in prevNetwork.columns]), ']', len(prevNetwork.columns)  )
+		print('  - Weights        : [', ', '.join([str(val)[0:5] for val in prevNetwork.linear[0:10]]) + ', ... ]', len(prevNetwork.linear) )
+		print('  - Structure      : [', ', '.join([str(val)[0:5] for val in prevNetwork.columns]), ']', len(prevNetwork.columns)  )
 		print(' Progress;')
 
 		file.write(str(generation)+',')
@@ -211,8 +209,9 @@ def learn():
 
 
 		# Create mutations of best BOT
-		for i in range(1, 4):
-			players[i].network = bestNetwork.reproduce(prevNetwork)
+		for i in range(0, 4):
+			if players[i].simplex == False:
+				players[i].network = bestNetwork.reproduce(prevNetwork)
 
 
 
@@ -234,26 +233,42 @@ def learn():
 
 		# Determine the best (non-simplex) bot
 		greatest = 0
-		for i in range(1, 4):
+		for i in range(0, 4):
+			if players[i].simplex == True:
+				continue
+
 			if score[i] > greatest:
 				greatest = score[i]
 		# Store the weights of the best bot for the next round
-		for i in range(1, 4):
+		for i in range(0, 4):
+			if players[i].simplex == True:
+				continue
+
 			if score[i] == greatest:
 				# Do not replace the current best with a worse solution
-				if score[i] <= bestScore:
+				if score[i] < bestScore:
 					break
+
+				# Allow equal bests to evolve the system
+				# Allows slow progression
+				if score[i] == bestScore:
+					print('    - New Varient')
+				else:
+					print('  - New Best     :', score[i])
+
 
 				prevNetwork = bestNetwork
 				bestNetwork = players[i].network
 				bestScore   = score[i]
 				bestScores  = score
 				generation += 1
-				print('  - New Best     :', bestScore)
 				break
 
 		# Add up all wins not including the simplex bot
-		for i in range(1, 4):
+		for i in range(0, 4):
+			if players[i].simplex == True:
+				continue
+
 			wins += score[i]
 
 
@@ -279,8 +294,8 @@ def learn():
 
 	file = open("result.dat", "w+")
 	file.write('Result;\n')
-	file.write(' - Weights:   [' + ', '.join([str(val)[0:10] for val in bestNetwork.linear]) + ']\n')
-	file.write(' - Structure: [' + ', '.join([str(val)[0:10] for val in bestNetwork.columns]) + ']\n')
+	file.write(' - Weights:   [' + ', '.join([str(val) for val in bestNetwork.linear]) + ']\n')
+	file.write(' - Structure: [' + ', '.join([str(val) for val in bestNetwork.columns]) + ']\n')
 	file.close()
 
 
