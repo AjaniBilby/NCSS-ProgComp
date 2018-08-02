@@ -42,7 +42,7 @@ class Card:
 	def greaterThan(self, card):
 		return card.worth < self.worth
 	def equalTo(self, card):
-		return card.worth == self.worth
+		return card.suitID == self.suitID and card.rankID == self.rankID
 
 
 def CardSortMethod(val):

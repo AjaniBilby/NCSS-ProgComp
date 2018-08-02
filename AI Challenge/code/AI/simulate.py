@@ -22,7 +22,7 @@ def playRound(players):
 	# Find the starting player
 	startCard = Card('3D')
 	for j in range(0, 4):
-		if players[i].hand.contains(startCard):
+		if players[j].hand.contains(startCard) == True:
 			i = j
 			break
 
@@ -168,7 +168,7 @@ def learn():
 	wins        = 0
 	games       = 0
 	generation  = 0
-	cycles      = 100000
+	cycles      = 50000
 	logInterval = (cycles/500) # 500 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 
@@ -246,7 +246,7 @@ def learn():
 
 			if score[i] == greatest:
 				# Do not replace the current best with a worse solution
-				if score[i] < bestScore:
+				if score[i] <= bestScore:
 					break
 
 				# Allow equal bests to evolve the system
