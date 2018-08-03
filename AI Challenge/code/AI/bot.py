@@ -6,8 +6,8 @@ class Bot:
 		self.hand = CardSet(autoFill=False)
 		self.unseen = CardSet(autoFill=True)
 		self.network = ANN(
-			[3,3,2,1],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			[4,3,2,1],
+			[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 		)
 		self.simplex = False
 
@@ -51,7 +51,8 @@ class Bot:
 			nxtConfidence = self.network.forward([
 				(beat[0].worth/card.worth),
 				(shs/13),
-				self.unseen.strength(card)
+				self.unseen.strength(card),
+				len(self.hand.remain)
 			])[0]
 
 			# If this card has a better confindence for playing it

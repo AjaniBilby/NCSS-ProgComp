@@ -124,7 +124,10 @@ def game(players):
 	finish = False
 
 	# Play 10 rounds
-	for i in range(0, 10):
+	for _ in range(0, 10):
+		if finish:
+			break
+
 		out = playRound(players)
 
 		# Sum all scores
@@ -136,16 +139,17 @@ def game(players):
 		for val in scores:
 			if val >= 100:
 				finish = True
-
-		if finish:
-			break
+				break
 
 	return scores
 
 
 
-
-def learn():
+"""
+Three ANN bots verse one simplex
+Breed from the best and previous best bot
+"""
+def learnByExample():
 	players = [
 		Bot(),
 		Bot(),
@@ -217,7 +221,7 @@ def learn():
 
 		# Make the games best out of 10 to remove chances of fluke
 		score = [0, 0, 0, 0]
-		for j in range(0, 10):
+		for j in range(0, 50):
 			out = game(players)
 			games += 1
 
@@ -299,5 +303,167 @@ def learn():
 	file.close()
 
 
+
+
+
+"""
+Always keep the currently best scoring bot between cycles.
+No simplex bot
+Breed from the two best bots
+"""
+def learnByIterativeImprovement():
+	players = [
+		Bot(),
+		Bot(),
+		Bot(),
+		Bot()
+	]
+	players[0].best = False
+	players[1].best = False
+	players[2].best = False
+	players[3].best = False
+	players[0].simplex = False
+	players[1].simplex = False
+	players[2].simplex = False
+	players[3].simplex = False
+
+	breeder = [
+		players[0].network,
+		players[0].network
+	]
+
+
+	# Setup log file
+	log = open("log.csv", "w+")
+	log.write('Generation,')
+	log.write('Score 1,Score 2,Score 3,Score 4,Deviation,Neuron Count,Columns,Largest Column\n')
+
+	# Estimation info
+	start = time.time()
+	last = time.time()
+	now  = time.time()
+
+	# Log info
+	deviation   = 0
+	games       = 0
+	generation  = 0
+	score       = [-100,-100,-100,-100]
+
+	# Simulation iteration
+	cycles      = 3000
+	logInterval = (cycles/500) # 500 = number of data points at the end of training
+
+	def updateLog(rerun, gameCount):
+		if generation < 2:
+			print(' Est: Unknown')
+		else:
+			#          Time Elapsed | per cycle | cycles remaining
+			duration = ((now - start) / rerun) * (cycles-rerun)
+			print(' Est:', '~'+str(duration/60)[0:5], 'mins')
+
+		print(' Status;')
+		print('  - Iteration      :', rerun, 'of', cycles)
+		print('  - Generation     :', generation)
+		print('  - Games Played   :', gameCount)
+		print('  - Deviation      :', str(deviation*100)[0:4]+'%')
+		print('  - Scores         :', ', '.join([str(val) for val in score]))
+		print(' Best;')
+		print('  - Weights        : [', ', '.join([str(val)[0:5] for val in breeder[0].linear[0:10]]) + ', ... ]', len(breeder[0].linear) )
+		print('  - Structure      : [', ', '.join([str(val)[0:5] for val in breeder[0].columns]), ']', len(breeder[0].columns) )
+		print(' Round;')
+		print('  - Weights        : [', ', '.join([str(val)[0:5] for val in breeder[1].linear[0:10]]) + ', ... ]', len(breeder[1].linear) )
+		print('  - Structure      : [', ', '.join([str(val)[0:5] for val in breeder[1].columns]), ']', len(breeder[1].columns)  )
+		print(' Progress;')
+
+		log.write(str(generation)+',')
+		log.write(','.join([str(val) for val in score])+',')
+		log.write(str(deviation)+',')
+		log.write(str(len(breeder[0].linear))+',')
+		log.write(str(len(breeder[0].columns))+',')
+		log.write(str(max(breeder[0].columns))+'\n')
+		log.flush()
+
+
+
+
+
+	for rerun in range(0, cycles):
+
+		# Create mutations of best BOT
+		for i in range(0, 4):
+			# Keep the best player in the game
+			if players[i].best == True:
+				continue
+
+			if players[i].simplex == False:
+				players[i].network = breeder[0].reproduce(breeder[1])
+		generation += 1
+
+
+
+		# Make the games best out of 50 to remove chances of fluke
+		score = [0, 0, 0, 0]
+		for _ in range(0, 50):
+			out = game(players)
+			games += 1
+
+			winnerScore = out[0]
+			winnerIndex = 0
+			for k in range(1, 4):
+				if out[k] > winnerScore:
+					winnerScore = out[k]
+					winnerIndex = k
+			score[winnerIndex] += 1
+
+
+		
+		# Determine the best two networks
+		firstScore  = 0
+		firstIndex  = 0
+		secondIndex = 0
+		for i in range(0, 4):
+			if score[i] > firstScore:
+				secondIndex = firstIndex
+				firstScore  = score[i]
+				firstIndex  = i
+		breeder[0] = players[firstIndex].network
+		breeder[1] = players[secondIndex].network
+
+
+		# Determine the score deviation
+		lastScore = firstScore
+		for i in range(0, 4):
+			if score[i] < lastScore:
+				lastScore = score[i]
+		# Average the deviation a bit to smooth out the numbers
+		deviation = ( deviation + ((firstScore-lastScore)/50) )/2
+
+
+		
+		# Remove some data points to help acess
+		if rerun % logInterval == 0:
+
+			# Print and write out results
+			print('\nStatus:', str(rerun/cycles*100)[0:4] + '%')
+			now = time.time()
+			updateLog(rerun, games)
+			last = time.time()
+			games = 0
+
+	print('Finished\a')
+	log.close()
+
+	print('\nEnd Product')
+	print(' Best;')
+	print('  - Weights:   [', ', '.join([str(val)[0:10] for val in breeder[0].linear]), ']')
+	print('  - Structure: [', ', '.join([str(val)[0:10] for val in breeder[0].columns]), ']')
+
+	file = open("result.dat", "w+")
+	file.write('Result;\n')
+	file.write(' - Weights:   [' + ', '.join([str(val) for val in breeder[0].linear]) + ']\n')
+	file.write(' - Structure: [' + ', '.join([str(val) for val in breeder[0].columns]) + ']\n')
+	file.close()
+
+
 if __name__ == '__main__':
-	learn()
+	learnByIterativeImprovement()
