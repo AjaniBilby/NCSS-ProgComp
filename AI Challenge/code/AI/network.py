@@ -50,7 +50,7 @@ class ANN:
 			len(other.columns)
 		])
 		# Mutate the result
-		columnCount = round( columnCount + (random.random()*2-1) )
+		columnCount = round( columnCount + (random.random()*2.25-1) )
 		# Ensure input and output columns exist
 		if columnCount < 2:
 			columnCount = 2
@@ -69,7 +69,7 @@ class ANN:
 
 			columns.append( random.choice(opts) )
 			# Mutate
-			columns[i] = round( columns[i] + (random.random()*2-1) )
+			columns[i] = round( columns[i] + (random.random()*2.25-1) )
 			# Ensure at least one neuron exists
 			if columns[i] < 2:
 				columns[i] = 2
@@ -102,7 +102,7 @@ class ANN:
 						opts.append(0)
 
 					weights[x-1][y1].append( random.choice(opts) )
-					weights[x-1][y1][y2] += (random.random()*2 -1) * 4
+					weights[x-1][y1][y2] += (random.random()*2 -1)
 					linear.append(weights[x-1][y1][y2])
 
 		out = ANN([], [])
