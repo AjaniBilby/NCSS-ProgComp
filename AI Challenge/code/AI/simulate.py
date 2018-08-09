@@ -152,7 +152,7 @@ def learnByExample():
 		Bot(),
 		Bot()
 	]
-	# players[0].simplex = True
+	players[0].simplex = True
 	# Keep the best bot in play for the next round
 	players[0].best = False
 	players[1].best = False
@@ -173,7 +173,7 @@ def learnByExample():
 	wins        = 0
 	games       = 0
 	generation  = 0
-	cycles      = 500
+	cycles      = 200
 	logInterval = (cycles/100) # 500 = number of data points at the end of training
 	score       = [-100,-100,-100,-100]
 	tally       = [0,0,0,0]
@@ -183,7 +183,8 @@ def learnByExample():
 			print(' Est: Unknown')
 		else:
 			# duration 1 log inter. | log intervals left
-			duration = (now - start) / rerun * ((cycles-rerun))
+			duration = now-start
+			duration = duration/(rerun/cycles) - duration
 			print(' Est:', str(duration/60)[0:5], 'mins')
 
 		highest = tally[1]
@@ -244,7 +245,7 @@ def learnByExample():
 
 		# Make the games best out of 10 to remove chances of fluke
 		score = [0, 0, 0, 0]
-		for _ in range(0, 50):
+		for _ in range(0, 10):
 			out = game(players)
 			games += 1
 
