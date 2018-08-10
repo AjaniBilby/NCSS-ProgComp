@@ -2,19 +2,19 @@
 
 class Matrix{
 	private:
-		std::vector< std::vector<float> > data;
+		std::vector< std::vector<double> > data;
 
 	public:
 		unsigned long columns;
 		unsigned long rows;
 
-		Matrix(int width, int depth){
+		Matrix(int width, int depth, double fill=0){
 			this->columns = width;
 			this->rows    = depth;
 
 			this->data.resize(depth);
 			for (int i=0; i<depth; i++){
-				this->data[i].resize(width, 0);
+				this->data[i].resize(width, fill);
 			}
 		};
 		Matrix(){
@@ -28,7 +28,6 @@ class Matrix{
 
 		std::string toString(){
 			std::string str = "Matrix";
-
 			str += " (" + std::to_string(this->columns) + ", " + std::to_string(this->rows) + ")";
 
 			str += "{\n";
@@ -41,7 +40,7 @@ class Matrix{
 
 				str += "\n";
 			}
-			str += "}\n";
+			str += "}";
 
 			return str;
 		}
@@ -49,7 +48,7 @@ class Matrix{
 
 
 
-		std::vector<float>& operator[](int y){
+		std::vector<double>& operator[](int y){
 			return this->data[y];
 		};
 
@@ -77,7 +76,7 @@ class Matrix{
 
 
 
-		void resize(int width, int depth, float fill=0){
+		void resize(int width, int depth, double fill=0){
 			this->rows    = depth;
 			this->columns = width;
 

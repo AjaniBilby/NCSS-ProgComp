@@ -1,8 +1,9 @@
 #include "./simulate.hpp"
 
-GameResult playRound(Bot *players[4]){
+GameResult playRound(Bot* players[4]){
 	CardSet deck(true);
 	deck.shuffle();
+
 
 	// Empty player's hands
 	for (int i=0; i<4; i++){
@@ -12,7 +13,7 @@ GameResult playRound(Bot *players[4]){
 	// Distribute the cards
 	int length = deck.size();
 	for (int i=0; i<length; i+=4){
-		for (int j=0; j<length; j++){
+		for (int j=0; j<4; j++){
 			players[j]->append(deck[i+j]);
 		}
 	}
@@ -23,8 +24,8 @@ GameResult playRound(Bot *players[4]){
 	int            i = 0;              // Current player
 	int    decompose = 3;              // How many people able to pass in a row
 	bool start_round = true;           // Is this the start of the round
-	bool     playing = false;          // Is the game finished
-	int    handSizes[4];               // Number of cards in each player's hand
+	bool     playing = true;          // Is the game finished
+	int handSizes[4] = {13,13,13,13};  // Number of cards in each player's hand
 	CardSet beat(false);               // The current best play
 	CardSet play(false);               // The current play
 
@@ -37,8 +38,17 @@ GameResult playRound(Bot *players[4]){
 		}
 	}
 
+	int passes = 0;
+
 	// Simulate game turn by turn
 	while (playing){
+		// Detect pass loops
+		if (passes > 8){
+			std::cerr << "Warn: Pass loop detected, terminating round" << std::endl;
+			break;
+		}
+
+
 		// Loop around the group
 		i++;
 		if (i > 3){
@@ -52,30 +62,34 @@ GameResult playRound(Bot *players[4]){
 			decompose = 3;
 		}
 
-		// Get play hand sizes
-		for (int j=0; j<4; j++){
-			handSizes[j] = players[j]->handSize();
-		}
-
 		play = players[i]->play(
 			start_round,
 			beat,
 			handSizes
 		);
+		start_round = false;
 
 		// Handle players passing
 		if (play.size() == 0){
 			decompose -= 1;
+			passes++;
 			continue;
 		}
+		passes = 0;
+
+		// Record the number of cards for each player
+		handSizes[i] -= play.size();
 
 		// Check that the play is valid
-		if (play[0].lessThan(&beat[0])){
-			std::cerr << "Invalid play: " << play[0].toString() << " < " << beat[0].toString();
+		if (beat.size() > 1){
+			if (play[0].lessThan(&beat[0])){
+				std::cerr << "Invalid play: " << play[0].toString() << " < " << beat[0].toString();
+			}
 		}
+		beat = play;
 
 		// This player has played their last card
-		if (players[i]->hasCards() == false){
+		if (handSizes[i] < 1){
 			playing = false;
 			continue;
 		}
@@ -89,41 +103,48 @@ GameResult playRound(Bot *players[4]){
 
 
 	// Calculate scores
-	int score[4];
+	GameResult res;
+	res.winnerIndex = 0;
+	res.scores[0] = 0;
+	res.scores[1] = 0;
+	res.scores[2] = 0;
+	res.scores[3] = 0;
 	int cards = 0;
-	int winnerIndex = 0;
 	int total = 0;
 	for (int i=0; i<4; i++){
-		cards = players[i]->handSize();
+		cards = handSizes[i];
 
 		if (cards == 0){
-			score[i] = 0;
-			winnerIndex  = i;
+			res.scores[i] = 0;
 		}else if (cards < 10){
-			score[i] = -1 * cards;
+			res.scores[i] = -1 * cards;
 		}else if (cards <= 12) {
-			score[i] = -2 * cards;
+			res.scores[i] = -2 * cards;
 		}else{
-			score[i] = -3 * cards;
+			res.scores[i] = -3 * cards;
 		}
-		total -= score[i];
+		total -= res.scores[i];
+
+		if (res.scores[i] > res.scores[res.winnerIndex]){
+			res.winnerIndex = i;
+		}
 	}
-	score[winnerIndex] = total;
+	// Sum of total scores - their score = sum of other players scores
+	res.scores[res.winnerIndex] = total + res.scores[res.winnerIndex];
 
 
-	// Parse results
-	GameResult res;
-	res.winnerIndex = winnerIndex;
-	res.scores[0] = score[0];
-	res.scores[1] = score[1];
-	res.scores[2] = score[2];
-	res.scores[3] = score[3];
 	return res;
 };
 
-GameResult playGame(Bot *players[4]){
+GameResult playGame(Bot* players[4]){
 	GameResult res;
 	GameResult rnd;
+
+	res.winnerIndex = 0;
+	res.scores[0]   = 0;
+	res.scores[1]   = 0;
+	res.scores[2]   = 0;
+	res.scores[3]   = 0;
 
 
 	// Play 10 rounds stopping if any score reaches 100
@@ -146,7 +167,7 @@ GameResult playGame(Bot *players[4]){
 
 	// Determine the winner
 	int bestIndex = 0;
-	for (int i=0; i<4; i++){
+	for (int i=1; i<4; i++){
 		if (res.scores[i] > res.scores[bestIndex]){
 			bestIndex = i;
 		}
@@ -159,167 +180,193 @@ GameResult playGame(Bot *players[4]){
 
 
 
-void print(
-	int rerun,
-	int cycles,
-	int gameCount,
-	int winCount,
-	int generation,
-	int networkLinear,
-	int networkColumns,
 
+void LogTraining(
+	int iteration,
+	int cycles,
+	int generation,
+	int tally[4],
+	int wins,
+	int games,
 	float winRate,
 	float smoothedWinRate,
-
-	int tally[4]
+	float duration
 ){
-	std::string out;
-	winRate         *= 100;
-	smoothedWinRate *= 100;
+	std::string str;
 
 
-	float deviation = 0;
-	int lowest  = tally[0];
+	int  lowest = tally[0];
 	int highest = tally[0];
-	int total   = 0;
+	int   total = 0;
 	for (int i=0; i<4; i++){
-		if (lowest > tally[i]){
-			lowest = tally[i];
-		}
-		if (highest < tally[i]){
+		if (tally[i] > highest){
 			highest = tally[i];
+		}
+
+		if (tally[i] < lowest){
+			tally[i] = lowest;
 		}
 
 		total += tally[i];
 	}
-	deviation = (highest - lowest);
-	deviation /= total * 100;
+	float deviation = float(highest - lowest) / total;
+
+	float remaining = (duration / iteration) * (cycles - iteration);
+	     remaining /= 60;
+
+	str  = "Status;\n";
+	str += "  - Iteration       : " + std::to_string(iteration) + " of " + std::to_string(cycles) + "\n";
+	str += "  - Generation      : " + std::to_string(generation) + "\n";
+	str += "  - Duration        : " + std::to_string(duration) + " sec\n";
+	str += "  - Estimate Time   : " + std::to_string(remaining) + " mins\n";
+	str += "Games;\n";
+	str += "  - Avg. Win        : " + std::to_string(smoothedWinRate*100).substr(0,4) + "%\n";
+	str += "  - Games Played    : " + std::to_string(games)                           +  "\n";
+	str += "  - Wins VS Simplex : " + std::to_string(wins)                            +  "\n";
+	str += "  - Win Rate        : " + std::to_string( winRate*100 ).substr(0,4)       + "%\n";
+	
+	str += "  - Tally           :";
+	for (int i=0; i<4; i++){
+		str += " " + std::to_string( tally[i] );
+	}
+	str += "\n";
+
+	str += "  - Deviation       : " + std::to_string( deviation*100 ).substr(0,4)     + "%\n";
+	std::cout << str << std::endl;
+};
 
 
-	out  = " Status;\n";
-	out += "  - Iterations      : " + std::to_string(rerun) + " of " + std::to_string(cycles) + '\n';
-	out += "  - Generation      : " + std::to_string(generation) + '\n';
-	out += " Game Meta;\n";
-	out += "  - Avg. Win        : " + std::to_string(winRate).substr(0, 5)   + "%\n";
-	out += "  - Games           : " + std::to_string(gameCount)              +  '\n';
-	out += "  - Wins VS Simplex : " + std::to_string(winCount)               +  '\n';
-	out += "  - Win Rate        : " + std::to_string(winCount).substr(0, 5)  + "%\n";
-	out += "  - Deviation       : " + std::to_string(deviation).substr(0, 5) + "%\n";
-
-	std::cout << out << std::endl;
-}
 
 
 
-void train(){
-	std::cout<< "Training..." << std::endl;
+Network train(Network reference){
+	// Create bots
+	Bot *player[] = {nullptr, nullptr, nullptr, nullptr};
+	player[0] = new Bot(false);
+	player[1] = new Bot(false);
+	player[2] = new Bot(false);
+	player[3] = new Bot(false);
 
-	Bot playerA = Bot();
-	std::cout << "al";
-	Bot playerB = Bot();
-	std::cout << "al";
-	Bot playerC = Bot();
-	std::cout << "al";
-	Bot playerD = Bot();
-	std::cout << "al";
+	
+	// Create breeders
+	Network bestNetwork = reference;
+	Network prevNetwork = reference;
+	int bestIndex       = 0;
 
-	std::cout<< "init"<< std::endl;
 
-	Bot* players[] = {nullptr, nullptr, nullptr, nullptr};
-	std::cout << "bl";
-	std::cout << players[0];
-	players[0] = &playerA;
-	std::cout << "bl";
-	players[1] = &playerB;
-	std::cout << "bl";
-	players[2] = new Bot();
-	std::cout << "bl";
-	players[3] = new Bot();
-	std::cout << "bl";
-
-	std::cout<< "Initilized Bots..." << std::endl;
-
-	Network bestNetwork( players[0]->network );
-	Network prevNetwork( players[0]->network );
-
-	std::cout<< "Initilized Networks..." << std::endl;
-
-	int   bestBot = 0;
-	int bestScores[4];
-
-	int      cycles = 1000;
-	int logInterval = cycles/100;
-	int  generation = 0;
+	// Training / Log info
 	int       games = 0;
 	int        wins = 0;
-	float   winRate = 0;
-	float  sWinRate = 0;
+	int      cycles = 5000;
+	int logInterval = cycles/100; // 500 long points
+	int generations = 0;
+	int    tally[4] = {0,0,0,0};
+	int   scores[4] = {0,0,0,0};
+	float winRate   = 1;
+	float sWinRate  = 0;
+
+	// Duration
+	clock_t begin_time = clock();
+	float duration;
 
 
-	GameResult rnd;
-	int temp = 0;
+	// Temp data
+	GameResult out;
+	int cBest = 0;
+	int tick  = 0;
+
+
 	for (int rerun=0; rerun<cycles; rerun++){
-		std::cout << rerun << std::endl;
 
-		// Spawn networks
+		// Mutate bots
 		for (int i=0; i<4; i++){
-			if (i == bestBot){
+			if (i == bestIndex || player[i]->simplex == true){
 				continue;
 			}
-			players[i]->network = bestNetwork.reproduce(&prevNetwork);
+
+			player[i]->network = bestNetwork.reproduce(&prevNetwork);
 		}
 
-		// Reset round data
-		rnd.winnerIndex = 0;
-		rnd.scores[0] = 0;
-		rnd.scores[1] = 0;
-		rnd.scores[2] = 0;
-		rnd.scores[3] = 0;
 
-		// Best of 10 games
-		//  Count the wins
-		for (int i=0; i<10; i++){
-			temp = playGame(players).winnerIndex;
-			rnd.scores[ temp ] += 1;
-			games++;
 
-			if (players[temp]->simplex == false){
+		// Best of 5 to remove fluke
+		scores[0] = 0;
+		scores[1] = 0;
+		scores[2] = 0;
+		scores[3] = 0;
+		for (int rnd=0; rnd<5; rnd++){
+			out = playGame(player);
+			scores[out.winnerIndex]++;
+			tally[out.winnerIndex]++;
+			games += 1;
+
+			if (player[out.winnerIndex]->simplex == false){
 				wins++;
 			}
 		}
 
 
-		// Transfer breeding rights
-		if (bestBot != rnd.winnerIndex){
-			bestBot = rnd.winnerIndex;
-			generation++;
+		// Determine which player one the most games
+		cBest = -1;
+		for (int i=0; i<4; i++){
+			// Ignore not ANNs
+			if (player[i]->simplex == true){
+				continue;
+			}
 
-			prevNetwork = bestNetwork;
-			bestNetwork = players[bestBot]->network;
+			if (cBest == -1){
+				cBest = i;
+				continue;
+			}
 
-			bestScores[0] = rnd.scores[0];
-			bestScores[1] = rnd.scores[1];
-			bestScores[2] = rnd.scores[2];
-			bestScores[3] = rnd.scores[3];
+			if (scores[i] > scores[cBest]){
+				cBest = i;
+			}
 		}
 
-		if (rerun % logInterval == 0){
-			winRate  = wins;
-			winRate /= games;
-			sWinRate = (sWinRate + winRate)/2;
 
-			print(
+		// If this is a new champion, give them breeding rights
+		if (cBest != bestIndex){
+			prevNetwork = bestNetwork;
+			bestNetwork = player[cBest]->network;
+			bestIndex = cBest;
+
+			generations++;
+		}
+
+
+		if (tick >= logInterval){
+			tick = 0;
+
+			winRate = float(wins) / games;
+			sWinRate = (winRate + sWinRate) / 2;
+
+			duration = float(clock() - begin_time) / CLOCKS_PER_SEC;
+
+			LogTraining(
 				rerun,
 				cycles,
+				generations,
+				tally,
+				wins,
 				games,
-				wins, 
-				generation,
-				bestNetwork.weightCount(),
-				bestNetwork.length(),
 				winRate,
 				sWinRate,
-				bestScores
+				duration
 			);
+
+			tally[0] = 0;
+			tally[1] = 0;
+			tally[2] = 0;
+			tally[3] = 0;
+			wins = 0;
+			games = 0;
 		}
+		tick++;
 	}
-}
+
+	std::cout << "Tranning complete;"<<std::endl;
+	std::cout << "  Generations: " << generations << std::endl;
+
+	return bestNetwork;
+};

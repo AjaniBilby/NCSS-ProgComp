@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <random>
 
 const char cardsSuit[5]  = "DCHS";
 const char cardsRank[14] = "34567890JQKA2";
@@ -35,9 +36,11 @@ class CardSet{
 
 	public:
 		// Create a card set the uses a whole deck or is empty
-		CardSet(bool autofill=true);
+		CardSet(bool autofill=false);
 		// Create a duplicate card set
 		CardSet(CardSet *other);
+
+
 
 		// Get a specific card from the set
 		Card& operator[](int x);
@@ -45,6 +48,11 @@ class CardSet{
 		size_t capacity();
 		// Get the number of cards within the set
 		size_t size();
+		// Convert to string
+		std::string toString();
+		// Removes all cards from the set
+		void flush();
+
 
 		// Returns the percentile this card lies within (of strength)
 		float strength(Card card);
@@ -60,9 +68,6 @@ class CardSet{
 
 		// Get sub-set of cards greater than input
 		CardSet subsetGreater(Card card);
-
-		// Removes all cards from the set
-		void flush();
 
 
 		// Remove card(s) form this set

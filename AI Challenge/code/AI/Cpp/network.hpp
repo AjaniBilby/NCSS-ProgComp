@@ -4,9 +4,14 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <string>
 #include <vector>
 
 typedef std::vector<unsigned int> NetworkTopology;
+
+#include <random>
+std::random_device random;
+auto RANDOM_MAX = random.max();
 
 class Network{
 	private:
@@ -34,7 +39,7 @@ class Network{
 		int neurons();
 		int length();
 
-		void print();
+		std::string toString();
 };
 
 

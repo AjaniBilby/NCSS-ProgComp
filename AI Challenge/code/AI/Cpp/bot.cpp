@@ -3,8 +3,6 @@
 
 
 Bot::Bot(bool simple){
-	std::cout << "Bot boot, + arg" << std::endl;
-
 	this->simplex = simple;
 	this->   hand = CardSet(false);
 	this-> unseen = CardSet(false);
@@ -12,8 +10,7 @@ Bot::Bot(bool simple){
 	if (simple == true){
 		this->network = Network();
 	}else{
-		std::vector<unsigned int> topology;
-		std::vector<float> weights;
+		NetworkTopology topology;
 
 		topology.resize(7);
 		topology[0] = 7;
@@ -24,33 +21,12 @@ Bot::Bot(bool simple){
 		topology[5] = 2;
 		topology[6] = 1;
 
-		this->network = Network( topology, weights );
+		this->network = Network( topology );
 	}
 };
-Bot::Bot(){
-	std::cout << "Missing arg"<<std::endl;
-
-	this->simplex = false;
-	this->   hand = CardSet(false);
-	this-> unseen = CardSet(false);
-
-	std::vector<unsigned int> topology;
-	std::vector<float> weights;
-
-	topology.resize(7);
-	topology[0] = 7;
-	topology[1] = 6;
-	topology[2] = 5;
-	topology[3] = 4;
-	topology[4] = 3;
-	topology[5] = 2;
-	topology[6] = 1;
-
-	this->network = Network( topology, weights );
-};
 
 
-// Game Handles
+// Game Handles/Helpers
 void Bot::reset(){
 	this->hand.flush();
 	this->unseen = CardSet(true);
@@ -64,12 +40,15 @@ void Bot::append(Card card){
 bool Bot::has(Card card){
 	return this->hand.contains(card);
 };
-bool Bot::hasCards(){
-	return this->hand.size() > 0;
-}
+int Bot::handSize(){
+	return this->hand.size();
+};
+
+// Bot's communication to the game
 CardSet Bot::play(bool is_start_of_round, CardSet play_to_beat, int handsizes[4]){
 	CardSet out = CardSet(false);
 	Card card;
+
 
 	// Play 3D to start the round if possible
 	if (is_start_of_round){
@@ -84,8 +63,14 @@ CardSet Bot::play(bool is_start_of_round, CardSet play_to_beat, int handsizes[4]
 	}
 
 
+	// Don't use the ANN if simplex
 	if (this->simplex){
-		card = this->hand.lowest(play_to_beat[0]);
+		if (play_to_beat.size() > 0){
+			card = this->hand.lowest(play_to_beat[0]);
+		}else{
+			card = this->hand.lowest(Card());
+		}
+
 		if (card.invalid == true){
 			return out;
 		}
@@ -96,38 +81,34 @@ CardSet Bot::play(bool is_start_of_round, CardSet play_to_beat, int handsizes[4]
 		return out;
 	}
 
-
 	// Remove the played cards
 	out = this->select(play_to_beat, handsizes);
 	this->hand.remove(out);
 	return out;
 };
-int Bot::handSize(){
-	return this->hand.size();
-}
+
+
+
 
 
 
 CardSet Bot::select(CardSet beat, int handsizes[4]){
-	CardSet       opts = this->hand.subsetGreater(beat[0]);
+	bool hasBeat = beat.size()!=0;
+
+	CardSet opts;
+	if (hasBeat){
+		opts = this->hand.subsetGreater(beat[0]);
+	}else{
+		opts = this->hand;
+	}
 	int         length = opts.size();
-	float beatStrength = this->unseen.strength(beat[0]);
 
 	CardSet out(false);
 
 
-	// Special cases to save on compute
-	if (length < 1){        // No more cards
-		return out;
-	}else if (length < 2){  // Only one card
-		out.append(opts[0]);
-		return out;
-	}
-
-
 	// Get the smallest hand size
-	float shs = 14;
-	for (int i=0; i<4; i++){
+	float shs = handsizes[0];
+	for (int i=1; i<4; i++){
 		if (handsizes[i] < shs){
 			shs = handsizes[i];
 		}
@@ -135,42 +116,49 @@ CardSet Bot::select(CardSet beat, int handsizes[4]){
 	shs /= 13;
 
 
-	// Info self
-	float handPercent    = this->hand.size();
-	handPercent /= 13;
+	// // Info self
+	float beatStrength = 0;
+	if (hasBeat){
+		beatStrength = this->unseen.strength(beat[0]);
+	}
+	float handPercent  = this->hand.size();
+	      handPercent /= 13;
 	// Best play available
 	int            bestI = 0;
 	float bestConfidence = 0;
 	// Item's stats
 	float     confidence = 0;
-	int         strength = 0;
-	std::vector<float>  pipe;
-	pipe.resize(7);
+	float       strength = 0;
+	Matrix pipe = Matrix(7, 1, 1);
+	Matrix res;
 
 	for (unsigned int i=0; i<length; i++){
 		strength = this->unseen.strength(opts[i]);
 
-		pipe[0] = strength,              // Strength of this play
-		pipe[1] = beatStrength,          // Strength of oponent's play
-		pipe[2] = (strength/beatStrength), // Relative strengths
+		pipe[0][0] = strength;              // Strength of this play
+		pipe[0][1] = beatStrength;          // Strength of oponent's play
+		if (beatStrength > 0){
+			pipe[0][2] = (strength/beatStrength); // Relative strengths
+		}else{
+			pipe[0][2] = 1;
+		}
 
-		pipe[3] = handPercent,           // Percent of my hand remain
-		pipe[4] = shs,                   // Percent of openent hand remain
-		pipe[5] = (handPercent/shs),       // Relative sizes of hands
+		pipe[0][3] = handPercent;           // Percent of my hand remain
+		pipe[0][4] = shs;                   // Percent of openent hand remain
+		pipe[0][5] = handPercent/shs;       // Relative sizes of hands
 
-		pipe[6] = (1/5),                   // Cards within play (relative to max play size)
+		pipe[0][6] = float(1) / 5;                   // Cards within play (relative to max play size)
 
-
-		confidence = this->network.forward(pipe)[0];
+		res = this->network.forward(pipe);
+		confidence = ( res )[0][0];
 		if (confidence > bestConfidence){
 			bestConfidence = confidence;
 			bestI          = i;
 		}
 	}
-
 	
 	// Allow the neural network to pass if necessary
-	if (bestConfidence > 1){
+	if (bestConfidence > 0){
 		out.append(opts[bestI]);
 		return out;
 	}

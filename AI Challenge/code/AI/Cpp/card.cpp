@@ -24,16 +24,18 @@ Card::Card(CardText str){
 		}
 	}
 
-	if (this->suitID != -1 && this->rankID != -1){
-		this->invalid = false;
-	}else{
+	if (this->suitID == -1 || this->rankID == -1){
 		this->invalid = true;
+		this->rankID  = 9999;
+		this->suitID  = 9999;
+	}else{
+		this->invalid = false;
 	}
 }
 Card::Card(int rank, int suit){
 	this->rankID = rank;
 	this->suitID = suit;
-	if (rank < 5 && suit < 14){
+	if (rank > 13 || suit > 3){
 		this->invalid = true;
 	}else{
 		this->invalid = false;
@@ -53,11 +55,19 @@ bool Card::lessThan(Card *other){
 	if (other->invalid == true){
 		return false;
 	}
-
-	if (this->rankID < other->rankID){
+	if (this->invalid == true){
 		return true;
 	}
-	if (this->suitID < other->suitID){
+
+	if (this->rankID == other->rankID){
+		if (this->suitID < other->suitID){
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+	if (this->rankID < other->rankID){
 		return true;
 	}
 
@@ -67,18 +77,30 @@ bool Card::greaterThan(Card *other){
 	if (other->invalid == true){
 		return true;
 	}
+	if (this->invalid == true){
+		return false;
+	}
+
+	if (this->rankID == other->rankID){
+		if (this->suitID > other->suitID){
+			return true;
+		}else{
+			return false;
+		}
+	}
 
 	if (this->rankID > other->rankID){
-		return true;
-	}
-	if (this->suitID > other->suitID){
 		return true;
 	}
 
 	return false;
 };
 bool Card::equalTo(Card *other){
-	if (other->invalid == this->invalid){
+	if (this->invalid != other->invalid){
+		return false;
+	}
+	// If both cards are invalid, rankID & suitID are irrelevent
+	if (this->invalid == other->invalid && this->invalid == true){
 		return true;
 	}
 
@@ -104,15 +126,18 @@ bool Card::equalTo(Card *other){
 
 // Initlizers
 CardSet::CardSet(bool autoFill){
-	if (autoFill){
+	if (autoFill == true){
 		this->remain.resize(52);
+
+		// Generate each card in order of worth
 		unsigned int i=0;
-		for (int s=0; s<4; s++){
-			for (int r=0; r<13; r++){
+		for (int r=0; r<13; r++){
+			for (int s=0; s<4; s++){
 				this->remain[i] = Card(r, s);
 				i++;
 			}
 		}
+
 	}else{
 		this->remain.resize(0);
 	}
@@ -144,12 +169,35 @@ void CardSet::append(Card card){
 void CardSet::flush(){
 	this->remain.resize(0);
 };
+std::string CardSet::toString(){
+	int len = this->remain.size();
+	std::string str = "CardSet("+std::to_string(len)+"){ ";
+
+	if (len == 0){
+		str += "}";
+		return str;
+	}
+
+	str += this->remain[0].toString();
+	for (int i=1; i<len; i++){
+		str += ", " + this->remain[i].toString();
+	}
+
+	str += " }";
+	return str;
+};
 
 
 
 float CardSet::strength(Card card){
 	unsigned int betterThan = 0;
-	unsigned int length = this->size();
+	unsigned int length = this->remain.size();
+
+	// If there are no cards to compare this card is the best
+	// Also prevents divide by zero errors
+	if (length == 0){
+		return 1;
+	}
 
 	for (unsigned int i=0; i<length; i++){
 		if (this->remain[i].lessThan(&card)){
@@ -157,13 +205,13 @@ float CardSet::strength(Card card){
 		}
 	}
 
-	return betterThan / length;
+	return float(betterThan) / length;
 };
 
 bool CardSet::contains(Card card){
 	unsigned int length = this->remain.size();
 	for (unsigned int i=0; i<length; i++){
-		if (card.equalTo( &this->remain[i] ) == true){
+		if (this->remain[i].equalTo(&card) == true){
 			return true;
 		}
 	}
@@ -176,8 +224,10 @@ Card CardSet::lowest(Card lowest){
 
 	unsigned int length = this->remain.size();
 	for (unsigned int i=0; i<length; i++){
-		if (lowest.lessThan(&this->remain[i]) && opt.greaterThan(&this->remain[i])){
-			opt = this->remain[i];
+		if (lowest.lessThan(&this->remain[i])){
+			if (opt.invalid == true || opt.greaterThan(&this->remain[i])){
+				opt = this->remain[i];
+			}
 		}
 	}
 
@@ -185,11 +235,11 @@ Card CardSet::lowest(Card lowest){
 }
 
 CardSet CardSet::subsetGreater(Card card){
-	CardSet out = CardSet();
+	CardSet out = CardSet(false);
 
 	unsigned int length = this->remain.size();
 	for (unsigned int i=0; i<length; i++){
-		if (this->remain[i].greaterThan(&card)){
+		if (this->remain[i].greaterThan(&card) == true){
 			out.append(this->remain[i]);
 		}
 	}
@@ -235,12 +285,13 @@ void CardSet::remove(CardSet cards){
 
 
 void CardSet::shuffle(){
+	std::random_device random;
 	CardSet nxt(false);
 	
 	int i=0;
 	int length = this->size();
 	while (length > 0){
-		i = rand() % length;
+		i = random() % length;
 
 		// Transfer the card
 		nxt.append( this->remain[i] );

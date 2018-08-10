@@ -16,7 +16,7 @@ class Bot{
 		CardSet unseen;
 
 		Bot();
-		Bot(bool simple);
+		Bot(bool simple = false);
 
 		void reset();
 		void observe(CardSet play);
