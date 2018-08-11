@@ -181,68 +181,11 @@ GameResult playGame(Bot* players[4]){
 
 
 
-void LogTraining(
-	int iteration,
-	int cycles,
-	int generation,
-	int tally[4],
-	int wins,
-	int games,
-	float winRate,
-	float smoothedWinRate,
-	float duration
-){
-	std::string str;
-
-
-	int  lowest = tally[0];
-	int highest = tally[0];
-	int   total = 0;
-	for (int i=0; i<4; i++){
-		if (tally[i] > highest){
-			highest = tally[i];
-		}
-
-		if (tally[i] < lowest){
-			tally[i] = lowest;
-		}
-
-		total += tally[i];
-	}
-	float deviation = float(highest - lowest) / total;
-
-	float remaining = (duration / iteration) * (cycles - iteration);
-	     remaining /= 60;
-
-	str  = "Status;\n";
-	str += "  - Iteration       : " + std::to_string(iteration) + " of " + std::to_string(cycles) + "\n";
-	str += "  - Generation      : " + std::to_string(generation) + "\n";
-	str += "  - Duration        : " + std::to_string(duration) + " sec\n";
-	str += "  - Estimate Time   : " + std::to_string(remaining) + " mins\n";
-	str += "Games;\n";
-	str += "  - Avg. Win        : " + std::to_string(smoothedWinRate*100).substr(0,4) + "%\n";
-	str += "  - Games Played    : " + std::to_string(games)                           +  "\n";
-	str += "  - Wins VS Simplex : " + std::to_string(wins)                            +  "\n";
-	str += "  - Win Rate        : " + std::to_string( winRate*100 ).substr(0,4)       + "%\n";
-	
-	str += "  - Tally           :";
-	for (int i=0; i<4; i++){
-		str += " " + std::to_string( tally[i] );
-	}
-	str += "\n";
-
-	str += "  - Deviation       : " + std::to_string( deviation*100 ).substr(0,4)     + "%\n";
-	std::cout << str << std::endl;
-};
-
-
-
-
 
 Network train(Network reference){
 	// Create bots
 	Bot *player[] = {nullptr, nullptr, nullptr, nullptr};
-	player[0] = new Bot(false);
+	player[0] = new Bot(true);
 	player[1] = new Bot(false);
 	player[2] = new Bot(false);
 	player[3] = new Bot(false);
@@ -258,12 +201,22 @@ Network train(Network reference){
 	int       games = 0;
 	int        wins = 0;
 	int      cycles = 5000;
-	int logInterval = cycles/100; // 500 long points
+	int logInterval = 50; // 500 long points
 	int generations = 0;
 	int    tally[4] = {0,0,0,0};
 	int   scores[4] = {0,0,0,0};
-	float winRate   = 1;
-	float sWinRate  = 0;
+	float   winRate = 1;
+	float  sWinRate = 0;
+	int   highScore = 0;
+	int    lowScore = 0;
+	int  totalScore = 0;
+	float deviation = 0;
+	float remaining = 0;
+	std::string str;
+
+
+	// CSV file
+	std::ofstream csv("log.csv");
 
 	// Duration
 	clock_t begin_time = clock();
@@ -297,8 +250,12 @@ Network train(Network reference){
 		for (int rnd=0; rnd<5; rnd++){
 			out = playGame(player);
 			scores[out.winnerIndex]++;
-			tally[out.winnerIndex]++;
 			games += 1;
+
+			for (int i=0; i<4; i++){
+				tally[i] += out.scores[i];
+			}
+			// tally[out.winnerIndex]++;
 
 			if (player[out.winnerIndex]->simplex == false){
 				wins++;
@@ -332,6 +289,7 @@ Network train(Network reference){
 			bestIndex = cBest;
 
 			generations++;
+			std::cout << "   New Generation" << std::endl;
 		}
 
 
@@ -342,18 +300,61 @@ Network train(Network reference){
 			sWinRate = (winRate + sWinRate) / 2;
 
 			duration = float(clock() - begin_time) / CLOCKS_PER_SEC;
+			remaining = (duration / rerun) * (cycles - rerun);
 
-			LogTraining(
-				rerun,
-				cycles,
-				generations,
-				tally,
-				wins,
-				games,
-				winRate,
-				sWinRate,
-				duration
-			);
+			lowScore   = tally[0];
+			highScore  = tally[0];
+			totalScore = 0;
+			for (int i=0; i<4; i++){
+				if (lowScore > tally[i]){
+					lowScore = tally[i];
+				}
+				if (highScore < tally[i]){
+					highScore = tally[i];
+				}
+
+				totalScore += abs(tally[i]);
+			}
+			deviation = float(abs(highScore - lowScore)) / totalScore;
+
+
+			str  = "\n\nStatus;\n";
+			str += "  - Iteration       : " + std::to_string(rerun) + " of " + std::to_string(cycles) + "\n";
+			str += "  - Generation      : " + std::to_string(generations) + "\n";
+			str += "  - Duration        : " + std::to_string(duration) + " sec\n";
+			str += "  - Estimate Time   : " + std::to_string(remaining) + " mins\n";
+			str += "Games;\n";
+			str += "  - Avg. Win        : " + std::to_string(sWinRate*100).substr(0,4) + "%\n";
+			str += "  - Games Played    : " + std::to_string(games)                           +  "\n";
+			str += "  - Wins VS Simplex : " + std::to_string(wins)                            +  "\n";
+			str += "  - Win Rate        : " + std::to_string(winRate*100).substr(0,4)         + "%\n";
+			
+			str += "  - Tally           :";
+			for (int i=0; i<4; i++){
+				str += " " + std::to_string( tally[i] );
+			}
+			str += "\n";
+
+			str += "  - Deviation       : " + std::to_string( deviation*100 ).substr(0,4)     + "%\n";
+
+			str += "ANN;\n";
+			str += "  - Topology        :";
+			int len = bestNetwork.topology.size();
+			for (int i=0; i<len; i++){
+				str += " "+std::to_string(bestNetwork.topology[i]);
+			}
+			str += "\n";
+
+			std::cout << str;
+
+
+
+			csv << generations << ",";
+			csv << winRate << ",";
+			csv << deviation << "\n";
+			csv.flush();
+
+
 
 			tally[0] = 0;
 			tally[1] = 0;
@@ -361,12 +362,16 @@ Network train(Network reference){
 			tally[3] = 0;
 			wins = 0;
 			games = 0;
+
+			bestNetwork.save("network.dat");
 		}
 		tick++;
 	}
 
-	std::cout << "Tranning complete;"<<std::endl;
+	std::cout << "\aTranning complete;"<<std::endl;
 	std::cout << "  Generations: " << generations << std::endl;
+	bestNetwork.save("network.dat");
+	csv.close();
 
 	return bestNetwork;
 };

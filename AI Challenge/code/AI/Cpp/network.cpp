@@ -30,6 +30,38 @@ Network::Network(std::vector<Matrix> form){
 		this->topology[i] = form[i-1].columns;
 	}
 };
+Network::Network(std::vector<double> form, NetworkTopology structure){
+	this->topology = structure;
+
+
+
+
+	// Size the weights to fit
+	int len = structure.size()-1;
+	this->weights.resize( len );
+	for (int i=0; i<len; i++){
+		this->weights[i].resize(structure[i+1], structure[i], 0);
+	}
+
+
+	// Transfer data
+	int   ptr = 0;
+	int  xLen = this->weights.size();
+	int y1Len = 0;
+	int y2Len = 0;
+	for (int x=0; x<xLen; x++){
+		y1Len = this->weights[x].rows;
+		y2Len = this->weights[x].columns;
+		for (int y1=0; y1<y1Len; y1++){
+			for (int y2=0; y2<y2Len; y2++){
+				this->weights[x][y1][y2] = form[ptr];
+				ptr++;
+			}
+		}
+	}
+};
+
+
 
 
 // Forward propergate the matrix through the network
@@ -43,8 +75,19 @@ Matrix Network::forward(Matrix input){
 	Matrix out = input;
 
 	int len = this->weights.size();
+	int yLen = 0;
+	int xLen = 0;
 	for (int i=0; i<len; i++){
 		out = out.dot(this->weights[i]);
+
+		// Apply activation function
+		yLen = out.rows;
+		xLen = out.columns;
+		for (int y=0; y<yLen; y++){
+			for (int x=0; x<xLen; x++){
+				out[y][x] = double(1) / (double(1) + exp(-out[y][x]));
+			}
+		}
 	}
 
 	return out;
@@ -148,7 +191,7 @@ Network Network::reproduce(Network *other){
 				// Vary
 				delta  = random();
 				delta /= RANDOM_MAX;
-				form[x-1][y1][y2] += delta;
+				form[x-1][y1][y2] += delta*0.1; // Varation rate 0.1
 			}
 		}
 	}
@@ -207,3 +250,129 @@ std::string Network::toString(){
 
 	return str;
 };
+
+
+
+std::vector<double> Network::flatten(){
+	std::vector<double> out;
+
+	// Calculate size
+	size_t size = 0;
+	int len = this->topology.size();
+	for (int i=1; i<len; i++){
+		size += this->topology[i-1] * this->topology[i];
+	}
+	out.resize(size, 0);
+
+
+	// Transfer data
+	int   ptr = 0;
+	int  xLen = this->weights.size();
+	int y1Len = 0;
+	int y2Len = 0;
+	for (int x=0; x<xLen; x++){
+		y1Len = this->weights[x].rows;
+		y2Len = this->weights[x].columns;
+		for (int y1=0; y1<y1Len; y1++){
+			for (int y2=0; y2<y2Len; y2++){
+				out[ptr] = this->weights[x][y1][y2];
+				ptr++;
+			}
+		}
+	}
+
+	return out;
+};
+
+
+
+
+void Network::load(std::string filepath){
+	std::ifstream file(filepath);
+	std::string data( ( std::istreambuf_iterator<char>(file) ), std::istreambuf_iterator<char>() );
+	int index = 0;
+
+	std::vector<double>  form;
+	NetworkTopology structure;
+
+
+
+	//----------------
+	// Read Topology
+	//----------------
+	// Length of topology
+	size_t topologySize = 0;	
+	memcpy(&topologySize, &data[index], sizeof(size_t));
+	index += sizeof(size_t);
+	// Topology data
+	structure.resize(topologySize);
+	for (int i=0; i<topologySize; i++){
+		memcpy(&structure[i], &data[index], sizeof(unsigned int));
+		index += sizeof(unsigned int);
+	}
+
+
+
+	//----------------
+	// Read Weights
+	//----------------
+	// Length of weights
+	size_t weightSize = 0;	
+	memcpy(&weightSize, &data[index], sizeof(size_t));
+	index += sizeof(size_t);
+	// Weight data
+	form.resize(weightSize);
+	for (int i=0; i<weightSize; i++){
+		memcpy(&form[i], &data[index], sizeof(double));
+		index += sizeof(double);
+	}
+
+
+	*this = Network(form, structure);
+};
+void Network::save(std::string filepath){
+	std::vector<char> data;
+
+	auto w = this->flatten();
+	// Size to fit topology
+	size_t size = (this->topology.size()) * sizeof(int) + sizeof(int);
+	// Size to fit weight data
+	size += w.size() * sizeof(double) + sizeof(int);
+	data.resize(size);
+
+
+	// Where the next chunk of data starts
+	long long index = 0;
+
+
+	// Write the number of elements in the topology
+	size_t len = this->topology.size();
+	memcpy(&data[index], &len, sizeof(size_t));
+	index += sizeof(size_t);
+
+	// Write each topology data point
+	for (int i=0; i<len; i++){
+		memcpy(&data[index], &this->topology[i], sizeof(int));
+		index += sizeof(int);
+	}
+
+
+	// Write the number of elements in the topology
+	len = w.size();
+	memcpy(&data[index], &len, sizeof(size_t));
+	index += sizeof(size_t);
+
+	// Write each topology data point
+	for (int i=0; i<len; i++){
+		memcpy(&data[index], &w[i], sizeof(double));
+		index += sizeof(double);
+	}
+
+
+
+
+	std::ofstream file(filepath, std::ios::out | std::ios::binary);
+	file.write(&data[0], data.size()*sizeof(char));
+	file.close();
+	std::cout << "    Saved Network ("<< ( data.size()*sizeof(char) ) <<" bytes)" << std::endl;
+}

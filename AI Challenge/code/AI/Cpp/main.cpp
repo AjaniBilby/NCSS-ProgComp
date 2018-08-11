@@ -59,24 +59,31 @@ void TestGame(){
 
 
 
-// #include "network.hpp"
-// void ANNTest(){
-// 	std::vector<unsigned int> topology;
-// 	topology.resize(3);
-// 	topology[0] = 3;
-// 	topology[1] = 2;
-// 	topology[2] = 1;
+#include "network.hpp"
+void ANNTest(){
+	std::vector<unsigned int> topology;
+	topology.resize(3);
+	topology[0] = 3;
+	topology[1] = 2;
+	topology[2] = 1;
 
-// 	Network parent(topology);
-// 	std::cout << parent.toString() << std::endl;
-// 	Network child = parent.reproduce(&parent);
-// 	std::cout << child.toString() << std::endl;
+	Network parent(topology);
+	std::cout << parent.toString() << std::endl;
+	Network child = parent.reproduce(&parent);
+	std::cout << child.toString() << std::endl;
 
-// 	Matrix data = Matrix(3, 1, 1);
+	// Matrix data = Matrix(3, 1, 1);
+	// data = child.forward(data);
+	// std::cout << data.toString() << std::endl;
 
-// 	data = child.forward(data);
-// 	std::cout << data.toString();
-// };
+	child.save("network.dat");
+
+
+	Network next = Network();
+	next.load("network.dat");
+	std::cout << "loaded network from file" << std::endl;
+	std::cout << next.toString();
+};
 
 
 
@@ -97,10 +104,14 @@ int main(){
 	topology[4] = 3;
 	topology[5] = 2;
 	topology[6] = 1;
-	Network net(topology);
+	Network(topology).save("network.dat");
+
+	Network net = Network();
+	net.load("network.dat");
 
 	net = train(net);
-	std::cout << "\n\n" << net.toString();
+	net.save("network.dat");
+	// std::cout << "\n\n" << net.toString();
 
 	return 0;
 }

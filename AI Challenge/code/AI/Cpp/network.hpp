@@ -2,6 +2,9 @@
 
 #include "./matrix.hpp"
 
+#include <streambuf>
+#include <fstream>
+
 #include <iostream>
 #include <stdlib.h>
 #include <string>
@@ -14,11 +17,10 @@ std::random_device random;
 auto RANDOM_MAX = random.max();
 
 class Network{
-	private:
+	public:
 		std::vector<unsigned int> topology;
 		std::vector<Matrix> weights;
 
-	public:
 		// Create an empty network
 		Network();
 		// Duplicate another network
@@ -27,6 +29,8 @@ class Network{
 		Network(NetworkTopology);
 		// Create a network using the weights to generate the topology
 		Network(std::vector<Matrix>);
+		// From flatterned state
+		Network(std::vector<double>, NetworkTopology);
 
 		// Propogate data through the network
 		Matrix forward(Matrix input);
@@ -40,6 +44,14 @@ class Network{
 		int length();
 
 		std::string toString();
+
+		// Convert network weights to 1D form
+		std::vector<double> flatten();
+
+		// Save the network to a file
+		void save(std::string filepath);
+		// Load the network from a file
+		void load(std::string filepath);
 };
 
 

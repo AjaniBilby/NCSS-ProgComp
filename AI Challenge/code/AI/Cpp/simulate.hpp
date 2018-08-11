@@ -3,6 +3,7 @@
 #include "./bot.hpp"
 #include "./card.hpp"
 
+#include <ostream>
 #include <iostream>
 #include <string>
 #include <vector>
