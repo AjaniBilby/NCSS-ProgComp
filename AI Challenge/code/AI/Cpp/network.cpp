@@ -288,12 +288,31 @@ std::vector<double> Network::flatten(){
 
 
 void Network::load(std::string filepath){
-	std::ifstream file(filepath);
-	std::string data( ( std::istreambuf_iterator<char>(file) ), std::istreambuf_iterator<char>() );
-	int index = 0;
+	std::vector<char> data;
+	std::streampos fileSize;
+
+	std::ifstream file(filepath, std::ifstream::binary);
+	if (file.is_open()){
+			file.seekg(0, std::ios_base::end);
+			fileSize = file.tellg();
+			file.seekg(0, std::ios_base::beg);
+			data.resize(fileSize);
+
+			// file.read(&data[0], fileSize);
+			data.resize(fileSize);
+			data.assign((std::istreambuf_iterator<char>(file)),
+									std::istreambuf_iterator<char>());
+	}else{
+		std::cerr << "Failed to read network from file" << std::endl;
+		return;
+	}
+
+	long long index = 0;
 
 	std::vector<double>  form;
 	NetworkTopology structure;
+
+	std::cout << "Loaded Network ("<<data.size()<<" bytes)"<<std::endl;
 
 
 
@@ -301,15 +320,18 @@ void Network::load(std::string filepath){
 	// Read Topology
 	//----------------
 	// Length of topology
-	size_t topologySize = 0;	
+	size_t topologySize = 0;
 	memcpy(&topologySize, &data[index], sizeof(size_t));
 	index += sizeof(size_t);
+	std::cout << "  Topology ("<< topologySize <<"):";
 	// Topology data
 	structure.resize(topologySize);
 	for (int i=0; i<topologySize; i++){
 		memcpy(&structure[i], &data[index], sizeof(unsigned int));
 		index += sizeof(unsigned int);
+		std::cout << " " << structure[i];
 	}
+	std::cout << std::endl;
 
 
 
@@ -322,6 +344,7 @@ void Network::load(std::string filepath){
 	index += sizeof(size_t);
 	// Weight data
 	form.resize(weightSize);
+	std::cout << "  Weight count: " << weightSize << std::endl;
 	for (int i=0; i<weightSize; i++){
 		memcpy(&form[i], &data[index], sizeof(double));
 		index += sizeof(double);
@@ -335,9 +358,9 @@ void Network::save(std::string filepath){
 
 	auto w = this->flatten();
 	// Size to fit topology
-	size_t size = (this->topology.size()) * sizeof(int) + sizeof(int);
+	size_t size = sizeof(size_t) + (this->topology.size()) * sizeof(unsigned int);
 	// Size to fit weight data
-	size += w.size() * sizeof(double) + sizeof(int);
+	size += sizeof(size_t) + (w.size() * sizeof(double));
 	data.resize(size);
 
 
@@ -352,8 +375,8 @@ void Network::save(std::string filepath){
 
 	// Write each topology data point
 	for (int i=0; i<len; i++){
-		memcpy(&data[index], &this->topology[i], sizeof(int));
-		index += sizeof(int);
+		memcpy(&data[index], &this->topology[i], sizeof(unsigned int));
+		index += sizeof(unsigned int);
 	}
 
 
@@ -372,7 +395,14 @@ void Network::save(std::string filepath){
 
 
 	std::ofstream file(filepath, std::ios::out | std::ios::binary);
-	file.write(&data[0], data.size()*sizeof(char));
+	file.write(&data[0], index);
 	file.close();
 	std::cout << "    Saved Network ("<< ( data.size()*sizeof(char) ) <<" bytes)" << std::endl;
+
+	std::cout << "      Topology:";
+	len = this->topology.size();
+	for (int i=0; i<len; i++){
+		std::cout << " " << this->topology[i];
+	}
+	std::cout << std::endl;
 }

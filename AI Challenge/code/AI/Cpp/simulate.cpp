@@ -216,7 +216,7 @@ Network train(Network reference){
 
 
 	// CSV file
-	std::ofstream csv("log.csv");
+	std::ofstream csv("log.csv", std::ofstream::app);
 
 	// Duration
 	clock_t begin_time = clock();
@@ -242,12 +242,12 @@ Network train(Network reference){
 
 
 
-		// Best of 5 to remove fluke
+		// Best of 3 to remove fluke
 		scores[0] = 0;
 		scores[1] = 0;
 		scores[2] = 0;
 		scores[3] = 0;
-		for (int rnd=0; rnd<5; rnd++){
+		for (int rnd=0; rnd<3; rnd++){
 			out = playGame(player);
 			scores[out.winnerIndex]++;
 			games += 1;
